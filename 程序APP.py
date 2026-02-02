@@ -21,7 +21,7 @@ feature_ranges = {
 }
 
 # Streamlit 界面
-st.title("Prediction Model with SHAP Visualization")
+st.title("Prognostic Model for Acute Myeloid Leukemia Patients Undergoing Allogeneic Hematopoietic Stem Cell Transplantation")
 
 # 动态生成输入项
 st.header("Enter the following feature values:")
@@ -82,3 +82,4 @@ if st.button("Predict"):
     # 保存并显示 SHAP 图
     plt.savefig("shap_force_plot.png", bbox_inches='tight', dpi=1200)
     st.image("shap_force_plot.png")
+
