@@ -118,12 +118,13 @@ if st.button("Calculate Risk"):
     )
 
     ax.axvline(0, color="black", linewidth=0.8)
-    ax.set_xlabel("SHAP value (impact on mortality risk)")
-    ax.set_title("Key Contributors to Individual Risk")
+    ax.set_xlabel("SHAP value")
+    ax.set_title(" ")
 
     plt.tight_layout()
     plt.savefig("shap_bar_nature.png", dpi=600)
     plt.close()
 
     st.image("shap_bar_nature.png")
+
 
