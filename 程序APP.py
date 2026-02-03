@@ -71,13 +71,15 @@ X_input = pd.DataFrame([feature_values], columns=feature_names)
 # ======================
 if st.button("Predict"):
 
-    # ---- Prediction ----
-    predicted_class = int(model.predict(X_input)[0])
+    # --------------------------------------------------
+    # 1. Predicted probability (FIXED: class = 1 only)
+    # --------------------------------------------------
     predicted_proba = model.predict_proba(X_input)[0]
+    probability = predicted_proba[1] * 100   # class 1 = death within 2 years
 
-    probability = predicted_proba[predicted_class] * 100
-
-    # ---- Display prediction text (original style) ----
+    # --------------------------------------------------
+    # 2. Display prediction text (original wording)
+    # --------------------------------------------------
     text = (
         f"Based on the above values, the probability of death within 2 years "
         f"following allogeneic hematopoietic stem cell transplantation is "
@@ -99,21 +101,21 @@ if st.button("Predict"):
     plt.close()
     st.image("prediction_text.png")
 
-    # ======================
-    # SHAP explanation (Force plot)
-    # ======================
+    # --------------------------------------------------
+    # 3. SHAP explanation (Force plot, SAME output node)
+    # --------------------------------------------------
     explainer = shap.TreeExplainer(model)
     shap_values = explainer.shap_values(X_input)
 
-    # LightGBM binary classification handling
+    # LightGBM binary classification: always explain class = 1
     if isinstance(shap_values, list):
-        shap_values_class = shap_values[predicted_class]
-        expected_value = explainer.expected_value[predicted_class]
+        shap_values_class = shap_values[1]
+        expected_value = explainer.expected_value[1]
     else:
         shap_values_class = shap_values
         expected_value = explainer.expected_value
 
-    plt.figure(figsize=(12, 4))
+    plt.figure(figsize=(12, 2.5))
 
     shap.force_plot(
         expected_value,
@@ -128,4 +130,3 @@ if st.button("Predict"):
     plt.close()
 
     st.image("shap_force_plot.png")
-
