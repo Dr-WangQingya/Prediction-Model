@@ -72,14 +72,11 @@ X_input = pd.DataFrame([feature_values], columns=feature_names)
 if st.button("Predict"):
 
     # --------------------------------------------------
-    # 1. Predicted probability (FIXED: class = 1 only)
+    # 1. Predicted probability (class = 1)
     # --------------------------------------------------
-    predicted_proba = model.predict_proba(X_input)[0]
-    probability = predicted_proba[1] * 100   # class 1 = death within 2 years
+    predicted_proba = model.predict_proba(X_input)[0, 1]
+    probability = predicted_proba * 100
 
-    # --------------------------------------------------
-    # 2. Display prediction text (original wording)
-    # --------------------------------------------------
     text = (
         f"Based on the above values, the probability of death within 2 years "
         f"following allogeneic hematopoietic stem cell transplantation is "
@@ -87,41 +84,38 @@ if st.button("Predict"):
     )
 
     fig, ax = plt.subplots(figsize=(10, 1.5))
-    ax.text(
-        0.5, 0.5,
-        text,
-        fontsize=16,
-        ha="center",
-        va="center",
-        fontname="Times New Roman",
-        transform=ax.transAxes
-    )
+    ax.text(0.5, 0.5, text, ha="center", va="center", fontsize=16)
     ax.axis("off")
-    plt.savefig("prediction_text.png", bbox_inches="tight", dpi=300)
+    plt.savefig("prediction_text.png", dpi=300, bbox_inches="tight")
     plt.close()
     st.image("prediction_text.png")
 
     # --------------------------------------------------
-    # 3. SHAP explanation (Force plot, SAME output node)
+    # 2. SHAP explanation (CORRECT logit → prob mapping)
     # --------------------------------------------------
     explainer = shap.TreeExplainer(model)
     shap_values = explainer.shap_values(X_input)
 
-    #expected_value = explainer.expected_value[1]
-    #shap_values_class = shap_values[1][0]
+    # class = 1 (death)
+    base_logit = explainer.expected_value[1]
+    shap_logit = shap_values[1][0]
 
-    base_value_prob = 1 / (1 + np.exp(-explainer.expected_value))  # 基准概率
-    shap_values_prob = shap_values[sample_index] / (1 + np.exp(-explainer.expected_value))  # 近似转换
-    shap.force_plot(base_value_prob, shap_values_prob, 
-                 X_input.iloc[0, :], 
-                matplotlib=True, show=False,figsize=(15, 4)) # 这里设置图形大小))
+    # sanity check: fx(logit) → probability
+    fx_logit = base_logit + shap_logit.sum()
+    fx_prob = 1 / (1 + np.exp(-fx_logit))
 
-    
+    # Force plot in logit space (mathematically correct)
+    shap.force_plot(
+        base_logit,
+        shap_logit,
+        X_input.iloc[0, :],
+        matplotlib=True,
+        show=False,
+        figsize=(15, 4)
+    )
+
     plt.tight_layout()
     plt.savefig("shap_force_plot.png", dpi=600, bbox_inches="tight")
     plt.close()
 
     st.image("shap_force_plot.png")
-
-
-
