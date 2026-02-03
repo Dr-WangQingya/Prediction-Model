@@ -77,9 +77,8 @@ if st.button("Calculate Risk"):
 
     st.markdown(
         f"""
-        <div style="border-left:6px solid {color}; padding:12px;">
-        <span style="font-size:28px; font-weight:bold;">{proba:.1f}%</span><br>
-        <span style="font-size:18px; color:{color};"><b>{risk_group}</b></span>
+        <div style="border-left:6px solid #444; padding:12px;">
+        <span style="font-size:30px; font-weight:bold;">{proba:.1f}%</span>
         </div>
         """,
         unsafe_allow_html=True
@@ -127,3 +126,4 @@ if st.button("Calculate Risk"):
     plt.close()
 
     st.image("shap_bar_nature.png")
+
