@@ -113,7 +113,7 @@ if st.button("Predict"):
         shap_values_class = shap_values
         expected_value = explainer.expected_value
 
-    plt.figure(figsize=(12, 2.5))
+    plt.figure(figsize=(12, 4))
 
     shap.force_plot(
         expected_value,
@@ -128,3 +128,4 @@ if st.button("Predict"):
     plt.close()
 
     st.image("shap_force_plot.png")
+
