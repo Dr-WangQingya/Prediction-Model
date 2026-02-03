@@ -6,7 +6,7 @@ import shap
 import matplotlib.pyplot as plt
 
 # ======================
-# Global plotting style (Nature / Lancet-like)
+# Global plotting style
 # ======================
 plt.rcParams.update({
     "font.family": "Times New Roman",
@@ -40,29 +40,25 @@ feature_names = list(feature_ranges.keys())
 # ======================
 # Streamlit UI
 # ======================
-st.title("Clinical Risk Prediction Tool for AML Patients Undergoing allo-HSCT")
-st.markdown(
-    """
-    **Purpose:**  
-    Estimate the individual risk of 2-year mortality after allogeneic hematopoietic stem cell transplantation  
-    and provide transparent, patient-level model explanation.
-    """
+st.title(
+    "Prognostic Model for Acute Myeloid Leukemia Patients "
+    "Undergoing Allogeneic Hematopoietic Stem Cell Transplantation"
 )
 
-st.subheader("Patient Characteristics")
+st.subheader("Enter the following feature values:")
 
 feature_values = []
 for feature, properties in feature_ranges.items():
     if properties["type"] == "numerical":
         value = st.number_input(
-            f"{feature}",
+            feature,
             min_value=float(properties["min"]),
             max_value=float(properties["max"]),
             value=float(properties["default"]),
         )
     else:
         value = st.selectbox(
-            f"{feature}",
+            feature,
             options=properties["options"],
             index=properties["options"].index(properties["default"]),
         )
@@ -71,78 +67,64 @@ for feature, properties in feature_ranges.items():
 X_input = pd.DataFrame([feature_values], columns=feature_names)
 
 # ======================
-# Prediction
+# Prediction & SHAP
 # ======================
-if st.button("Calculate Risk"):
+if st.button("Predict"):
 
-    proba = model.predict_proba(X_input)[0][1] * 100
+    # ---- Prediction ----
+    predicted_class = int(model.predict(X_input)[0])
+    predicted_proba = model.predict_proba(X_input)[0]
 
-    # ---- Risk stratification ----
-    if proba < 20:
-        risk_group = "Low risk"
-        color = "green"
-    elif proba < 50:
-        risk_group = "Intermediate risk"
-        color = "orange"
-    else:
-        risk_group = "High risk"
-        color = "red"
+    probability = predicted_proba[predicted_class] * 100
 
-    # ---- Display risk score ----
-    st.markdown("### Predicted 2-Year Mortality Risk")
-
-    st.markdown(
-        f"""
-        <div style="border-left:6px solid {color}; padding:12px;">
-        <span style="font-size:28px; font-weight:bold;">{proba:.1f}%</span><br>
-        <span style="font-size:18px; color:{color};"><b>{risk_group}</b></span>
-        </div>
-        """,
-        unsafe_allow_html=True
+    # ---- Display prediction text (original style) ----
+    text = (
+        f"Based on the above values, the probability of death within 2 years "
+        f"following allogeneic hematopoietic stem cell transplantation is "
+        f"{probability:.2f}%"
     )
 
-    # ======================
-    # SHAP explanation
-    # ======================
-    st.markdown("### Individual Risk Explanation (SHAP)")
+    fig, ax = plt.subplots(figsize=(10, 1.5))
+    ax.text(
+        0.5, 0.5,
+        text,
+        fontsize=16,
+        ha="center",
+        va="center",
+        fontname="Times New Roman",
+        transform=ax.transAxes
+    )
+    ax.axis("off")
+    plt.savefig("prediction_text.png", bbox_inches="tight", dpi=300)
+    plt.close()
+    st.image("prediction_text.png")
 
+    # ======================
+    # SHAP explanation (Force plot)
+    # ======================
     explainer = shap.TreeExplainer(model)
     shap_values = explainer.shap_values(X_input)
 
+    # LightGBM binary classification handling
     if isinstance(shap_values, list):
-        shap_values_class = shap_values[1]
+        shap_values_class = shap_values[predicted_class]
+        expected_value = explainer.expected_value[predicted_class]
     else:
         shap_values_class = shap_values
+        expected_value = explainer.expected_value
 
-    shap_df = pd.DataFrame({
-        "Feature": feature_names,
-        "SHAP value": shap_values_class[0]
-    }).sort_values(by="SHAP value", key=np.abs, ascending=True)
+    plt.figure(figsize=(12, 2.5))
 
-    # ======================
-    # Nature-style SHAP bar plot
-    # ======================
-    fig, ax = plt.subplots(figsize=(5, 5))
-
-    colors = shap_df["SHAP value"].apply(
-        lambda x: "#d62728" if x > 0 else "#1f77b4"
+    shap.force_plot(
+        expected_value,
+        shap_values_class[0, :],
+        X_input.iloc[0, :],
+        matplotlib=True,
+        show=False
     )
-
-    ax.barh(
-        shap_df["Feature"],
-        shap_df["SHAP value"],
-        color=colors
-    )
-
-    ax.axvline(0, color="black", linewidth=0.8)
-    ax.set_xlabel("SHAP value (impact on mortality risk)")
-    ax.set_title("Key Contributors to Individual Risk")
 
     plt.tight_layout()
-    plt.savefig("shap_bar_nature.png", dpi=600)
+    plt.savefig("shap_force_plot.png", dpi=1200, bbox_inches="tight")
     plt.close()
 
-    st.image("shap_bar_nature.png")
-
-
-
+    st.image("shap_force_plot.png")
