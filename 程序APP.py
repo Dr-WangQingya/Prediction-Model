@@ -107,32 +107,20 @@ if st.button("Predict"):
     explainer = shap.TreeExplainer(model)
     shap_values = explainer.shap_values(X_input)
 
-    expected_value = explainer.expected_value[1]
-    shap_values_class = shap_values[1][0]
+    #expected_value = explainer.expected_value[1]
+    #shap_values_class = shap_values[1][0]
 
-    # ---- log-odds → probability ----
-    base_value_prob = 1 / (1 + np.exp(-expected_value))
+    base_value_prob = 1 / (1 + np.exp(-explainer.expected_value))  # 基准概率
+    shap_values_prob = shap_values[sample_index] / (1 + np.exp(-explainer.expected_value))  # 近似转换
+    shap.force_plot(base_value_prob, shap_values_prob, 
+                X_test.iloc[sample_index], 
+                matplotlib=True, show=False,figsize=(15, 4)) # 这里设置图形大小))
 
-    fx_logit = expected_value + shap_values_class.sum()
-    fx_prob = 1 / (1 + np.exp(-fx_logit))
-
-    # ---- scale SHAP values (approximation) ----
-    scaling_factor = (fx_prob - base_value_prob) / shap_values_class.sum()
-    shap_values_prob = shap_values_class * scaling_factor
-
-    plt.figure(figsize=(12, 6))
-
-    shap.force_plot(
-        expected_value,
-        shap_values_class[0, :],
-        X_input.iloc[0, :],
-        matplotlib=True,
-        show=False
-    )
-
+    
     plt.tight_layout()
     plt.savefig("shap_force_plot.png", dpi=600, bbox_inches="tight")
     plt.close()
 
     st.image("shap_force_plot.png")
+
 
