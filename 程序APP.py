@@ -14,7 +14,7 @@ feature_ranges = {
     "Disease stage before transplantation": {"type": "categorical", "options": [1, 2, 3], "default": 1},
     "PLT graft failure": {"type": "categorical", "options": [0, 1], "default": 1},
     "MNC": {"type": "numerical", "min": 4.521, "max": 35.021, "default": 11.161},
-    "PLT graft time": {"type": "numerical", "min": 8.00, "max": 81.00, "default": 14},
+    "PLT graft time": {"type": "numerical", "min": 8, "max": 81, "default": 14},
     "CD34": {"type": "numerical", "min": 1.311, "max": 22.411, "default": 6.391},
     "HCT-CI": {"type": "categorical", "options": [0, 1, 2, 3, 4, 5], "default": 0},
     "WBC count at diagnose": {"type": "numerical", "min": 0.710, "max": 369.080, "default": 0.98},
@@ -82,3 +82,4 @@ if st.button("Predict"):
     # 保存并显示 SHAP 图
     plt.savefig("shap_force_plot.png", bbox_inches='tight', dpi=1200)
     st.image("shap_force_plot.png")
+
