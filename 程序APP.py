@@ -4,10 +4,9 @@ import numpy as np
 import pandas as pd
 import shap
 import matplotlib.pyplot as plt
-import lightgbm as lgb
 
 # ======================
-# Global plotting style
+# Global plotting style (Nature / Lancet-like)
 # ======================
 plt.rcParams.update({
     "font.family": "Times New Roman",
@@ -41,25 +40,23 @@ feature_names = list(feature_ranges.keys())
 # ======================
 # Streamlit UI
 # ======================
-st.title(
-    "Prognostic Model for Acute Myeloid Leukemia Patients "
-    "Undergoing Allogeneic Hematopoietic Stem Cell Transplantation"
-)
+st.title("Clinical Risk Prediction Tool for AML Patients Undergoing allo-HSCT")
 
-st.subheader("Enter the following feature values:")
+
+st.subheader("Patient Characteristics")
 
 feature_values = []
 for feature, properties in feature_ranges.items():
     if properties["type"] == "numerical":
         value = st.number_input(
-            feature,
+            f"{feature}",
             min_value=float(properties["min"]),
             max_value=float(properties["max"]),
             value=float(properties["default"]),
         )
     else:
         value = st.selectbox(
-            feature,
+            f"{feature}",
             options=properties["options"],
             index=properties["options"].index(properties["default"]),
         )
@@ -68,72 +65,65 @@ for feature, properties in feature_ranges.items():
 X_input = pd.DataFrame([feature_values], columns=feature_names)
 
 # ======================
-# Prediction & SHAP
+# Prediction
 # ======================
-if st.button("Predict"):
+if st.button("Calculate Risk"):
 
-    # --------------------------------------------------
-    # 1. Predicted probability (class = 1)
-    # --------------------------------------------------
-    predicted_proba = model.predict_proba(X_input)[0, 1]
-    probability = predicted_proba * 100
+    proba = model.predict_proba(X_input)[0][1] * 100
 
-    text = (
-        f"Based on the above values, the probability of death within 2 years "
-        f"following allogeneic hematopoietic stem cell transplantation is "
-        f"{probability:.2f}%"
+    
+    # ---- Display risk score ----
+    st.markdown("### Based on the above values, the probability of death within 2 years following allogeneic hematopoietic stem cell transplantation is")
+
+    st.markdown(
+        f"""
+        <div style="border-left:6px solid {color}; padding:12px;">
+        <span style="font-size:28px; font-weight:bold;">{proba:.1f}%</span><br>
+        <span style="font-size:18px; color:{color};"><b>{risk_group}</b></span>
+        </div>
+        """,
+        unsafe_allow_html=True
     )
 
-    fig, ax = plt.subplots(figsize=(10, 1.5))
-    ax.text(0.5, 0.5, text, ha="center", va="center", fontsize=16)
-    ax.axis("off")
-    plt.savefig("prediction_text.png", dpi=300, bbox_inches="tight")
-    plt.close()
-    st.image("prediction_text.png")
+    # ======================
+    # SHAP explanation
+    # ======================
+    st.markdown("### Individual Risk Explanation (SHAP)")
 
-    # --------------------------------------------------
-    # 2. SHAP explanation (CORRECT logit → prob mapping)
-    # --------------------------------------------------
     explainer = shap.TreeExplainer(model)
     shap_values = explainer.shap_values(X_input)
-    expected_value = explainer.expected_value
-    
-    # -------- robust handling for binary classifier -----
-    if isinstance(expected_value, (list, np.ndarray)):
-        # rare case: explicit class outputs
-    base_logit = expected_value[1]
-    shap_logit = shap_values[1][0]
-else:
-    # most common LightGBM binary case
-    base_logit = expected_value
-    shap_logit = shap_values[0]
 
-    # class = 1 (death)
-    base_logit = explainer.expected_value[1]
-    shap_logit = shap_values[1][0]
+    if isinstance(shap_values, list):
+        shap_values_class = shap_values[1]
+    else:
+        shap_values_class = shap_values
 
-    # sanity check: fx(logit) → probability
-    fx_logit = base_logit + shap_logit.sum()
-    fx_prob = 1 / (1 + np.exp(-fx_logit))
+    shap_df = pd.DataFrame({
+        "Feature": feature_names,
+        "SHAP value": shap_values_class[0]
+    }).sort_values(by="SHAP value", key=np.abs, ascending=True)
 
-    # Force plot in logit space (mathematically correct)
-    shap.force_plot(
-        base_logit,
-        shap_logit,
-        X_input.iloc[0, :],
-        matplotlib=True,
-        show=False,
-        figsize=(15, 4)
+    # ======================
+    # Nature-style SHAP bar plot
+    # ======================
+    fig, ax = plt.subplots(figsize=(6, 4))
+
+    colors = shap_df["SHAP value"].apply(
+        lambda x: "#d62728" if x > 0 else "#1f77b4"
     )
+
+    ax.barh(
+        shap_df["Feature"],
+        shap_df["SHAP value"],
+        color=colors
+    )
+
+    ax.axvline(0, color="black", linewidth=0.8)
+    ax.set_xlabel("SHAP value (impact on mortality risk)")
+    ax.set_title("Key Contributors to Individual Risk")
 
     plt.tight_layout()
-    plt.savefig("shap_force_plot.png", dpi=600, bbox_inches="tight")
+    plt.savefig("shap_bar_nature.png", dpi=600)
     plt.close()
 
-    st.image("shap_force_plot.png")
-
-    # Optional: consistency check (debug, can remove later)
-    st.caption(
-        f"Model probability = {predicted_proba:.4f} | "
-        f"SHAP reconstructed probability = {fx_prob:.4f}"
-    )
+    st.image("shap_bar_nature.png")
