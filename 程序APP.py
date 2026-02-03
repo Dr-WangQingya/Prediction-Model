@@ -113,7 +113,7 @@ if st.button("Predict"):
     base_value_prob = 1 / (1 + np.exp(-explainer.expected_value))  # 基准概率
     shap_values_prob = shap_values[sample_index] / (1 + np.exp(-explainer.expected_value))  # 近似转换
     shap.force_plot(base_value_prob, shap_values_prob, 
-                X_test.iloc[sample_index], 
+                 X_input.iloc[0, :], 
                 matplotlib=True, show=False,figsize=(15, 4)) # 这里设置图形大小))
 
     
@@ -122,5 +122,6 @@ if st.button("Predict"):
     plt.close()
 
     st.image("shap_force_plot.png")
+
 
 
