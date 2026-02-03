@@ -64,8 +64,8 @@ X_input = pd.DataFrame([feature_values], columns=feature_names)
 if st.button("Predict"):
 
     # ---- Prediction ----
-    predicted_class = int(model.predict(X_input)[1])
-    predicted_proba = model.predict_proba(X_input)[1]
+    predicted_class = int(model.predict(X_input)[0)
+    predicted_proba = model.predict_proba(X_input)[0]
 
     # 明确：1 = 2年内死亡风险
     death_probability = predicted_proba[1] * 100
@@ -122,4 +122,5 @@ if st.button("Predict"):
     plt.close()
 
     st.image("shap_force_plot.png")
+
 
