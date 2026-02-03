@@ -122,7 +122,7 @@ if st.button("Calculate Risk"):
     # ======================
     # Nature-style SHAP bar plot
     # ======================
-    fig, ax = plt.subplots(figsize=(4, 6))
+    fig, ax = plt.subplots(figsize=(5, 5))
 
     colors = shap_df["SHAP value"].apply(
         lambda x: "#d62728" if x > 0 else "#1f77b4"
@@ -143,5 +143,6 @@ if st.button("Calculate Risk"):
     plt.close()
 
     st.image("shap_bar_nature.png")
+
 
 
